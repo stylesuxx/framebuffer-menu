@@ -15,7 +15,7 @@ typedef struct IMAGE{
   char path[255];
   int width, height;
   int bpp;
-  int dataOffset;
+  int offset;
   bool isValid;
 } IMAGE;
 
@@ -42,7 +42,7 @@ int main(int argc, char* argv[])
   bool escape = false;
   int i, n;
   char paths[5][255];  
-    
+
   if(argc < 2)
     usage();
 
@@ -192,7 +192,7 @@ struct IMAGE build(const char *imagePath)
   // Get the offset at which the actual image data starts
   fseek(image, 10, SEEK_SET);
   fread(offset, 4, 1, image);
-  data.dataOffset = getIntFromBytes(offset);
+  data.offset = getIntFromBytes(offset);
 
   // Get width & height
   fseek(image, 18, SEEK_SET);
@@ -201,8 +201,8 @@ struct IMAGE build(const char *imagePath)
   data.width = getIntFromBytes(width);
   data.height = getIntFromBytes(height);
 
-  // Depth 32Bit
-  data.bpp = ((fileSizeInBytes - data.dataOffset) / (data.height * data.width)) * 8;
+  // Check the images depth
+  data.bpp = ((fileSizeInBytes - data.offset) / (data.height * data.width)) * 8;
   if(data.bpp != 32)
     data.isValid = false;
 
@@ -254,7 +254,7 @@ void draw(IMAGE meta)
   if(meta.isValid) {
     // Draw the menu item
     image = fopen(meta.path, "r+");
-    fseek(image, meta.dataOffset, SEEK_SET);
+    fseek(image, meta.offset, SEEK_SET);
 
     int off;
     for(i = meta.height-1; i >= 0; i--) {
