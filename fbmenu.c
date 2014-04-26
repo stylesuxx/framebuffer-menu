@@ -40,7 +40,9 @@ int main(int argc, char* argv[])
   struct fb_fix_screeninfo finfo;
   long int dx, dy;
   bool escape = false;
-
+  int i, n;
+  char paths[5][255];  
+    
   if(argc < 2)
     usage();
 
@@ -50,25 +52,22 @@ int main(int argc, char* argv[])
   imagePath = argv[1];
   
   // Build an array of paths to the menu item images
-  char str[5][255];  
   struct dirent **namelist;
-  int i,n;
   n = scandir(imagePath, &namelist, 0, alphasort);
   if (n < 0) {
     cleanUp();
     printf("Could not read image directory.\n");
     return 1;
   }
-  else {
-    for (i = 0; i < n; i++) {
-      if(strstr(namelist[i]->d_name, ".bmp") == NULL) continue;
 
-      strcpy(str[images], imagePath);
-      strcat(str[images], "/");
-      strcat(str[images], namelist[i]->d_name);
-      images++;
-      free(namelist[i]);
-    }
+  for (i = 0; i < n; i++) {
+    if(strstr(namelist[i]->d_name, ".bmp") == NULL) continue;
+
+    strcpy(paths[images], imagePath);
+    strcat(paths[images], "/");
+    strcat(paths[images], namelist[i]->d_name);
+    images++;
+    free(namelist[i]);
   }
   free(namelist);
 
@@ -103,7 +102,7 @@ int main(int argc, char* argv[])
   height = (screensize / (depth/8)) / width;
   frameBuffer = mmap(0, screensize, PROT_READ | PROT_WRITE, MAP_SHARED, frameBufferFD, 0);
     
-  draw(build(str[0]));
+  draw(build(paths[0]));
   for(;;) {
     unsigned char keyPress = mygetch();
     if(keyPress == 'B' && escape) {
@@ -111,7 +110,7 @@ int main(int argc, char* argv[])
       if(selection >= images)
         selection = images-1;
 
-      draw(build(str[selection]));
+      draw(build(paths[selection]));
     }
 
     if(keyPress == 'A' && escape) {
@@ -119,7 +118,7 @@ int main(int argc, char* argv[])
       if(selection < 0)
         selection = 0;
 
-      draw(build(str[selection]));
+      draw(build(paths[selection]));
     }
 
     if(keyPress == '[') escape = true;
