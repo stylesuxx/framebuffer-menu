@@ -200,8 +200,11 @@ struct IMAGE build(const char *imagePath)
   data.width = getIntFromBytes(width);
   data.height = getIntFromBytes(height);
 
+  // Depth 32Bit
   data.bpp = ((fileSizeInBytes - data.dataOffset) / (data.height * data.width)) * 8;
-
+  if(data.bpp != 32)
+    data.isValid = false;
+  
   fclose(image);
   return data;
 }
