@@ -3,4 +3,4 @@ fbmenu: fbmenu.c
 
 PHONY: clean
 clean:
-	rm fbmenu
+	rm fbmenu *.o
