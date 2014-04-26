@@ -9,22 +9,22 @@
 #include <stdbool.h>
 
 #include "getch.h"
+#include "byteconversion.h"
 
 static const char BITMAP_FORMAT[] = "BM";
 
-typedef struct IMAGE{
+typedef struct imageData{
   char path[255];
   int width, height;
   int bpp;
   int offset;
   bool isValid;
-} IMAGE;
+} imageData;
 
-IMAGE build(const char *imagePath);
-void draw(IMAGE image);
+imageData build(const char *imagePath);
+void draw(imageData image);
+
 void cleanUp();
-unsigned int getIntFromBytes(unsigned char bytes[4]);
-int mygetch();
 void usage();
 
 int frameBufferFD = 0;
@@ -146,10 +146,10 @@ void cleanUp()
   system("clear");
 }
 
-struct IMAGE build(const char *imagePath)
+struct imageData build(const char *imagePath)
 {
   FILE *image;
-  struct IMAGE data;
+  struct imageData data;
   unsigned char format[3] = {'\0'};
   unsigned char fileSize[4];
   unsigned char offset[4];
@@ -178,7 +178,7 @@ struct IMAGE build(const char *imagePath)
 
   // Check the filesize indicated by the header with the files real size
   fread(fileSize, 4, 1, image);
-  fileSizeInBytes = getIntFromBytes(fileSize);
+  fileSizeInBytes = littleEndianToInt(fileSize);
 
   fseek(image, 0, SEEK_END);
   fileSizeReal =  ftell(image);
@@ -193,14 +193,14 @@ struct IMAGE build(const char *imagePath)
   // Get the offset at which the actual image data starts
   fseek(image, 10, SEEK_SET);
   fread(offset, 4, 1, image);
-  data.offset = getIntFromBytes(offset);
+  data.offset = littleEndianToInt(offset);
 
   // Get width & height
   fseek(image, 18, SEEK_SET);
   fread(width, 4, 1, image);
   fread(height, 4, 1, image);
-  data.width = getIntFromBytes(width);
-  data.height = getIntFromBytes(height);
+  data.width = littleEndianToInt(width);
+  data.height = littleEndianToInt(height);
 
   // Check the images depth
   data.bpp = ((fileSizeInBytes - data.offset) / (data.height * data.width)) * 8;
@@ -211,18 +211,7 @@ struct IMAGE build(const char *imagePath)
   return data;
 }
 
-unsigned int getIntFromBytes(unsigned char bytes[4])
-{
-  unsigned int result = 0;
-  result |= bytes[0];
-  result |= bytes[1]<<8;
-  result |= bytes[2]<<16;
-  result |= bytes[3]<<24;
-
-  return result;
-}
-
-void draw(IMAGE meta)
+void draw(imageData meta)
 {
   FILE *image;
   unsigned char *pixelBuffer = malloc(meta.bpp/8);
@@ -285,6 +274,6 @@ void draw(IMAGE meta)
 
 void usage()
 {
-  printf("Usage: ./fbmenu IMAGE_FOLDER\n");
+  printf("Usage: ./fbmenu imageData_FOLDER\n");
   exit(1);
 }

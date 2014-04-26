@@ -1,5 +1,5 @@
 fbmenu: fbmenu.c
-	cc fbmenu.c getch.c -o fbmenu
+	cc fbmenu.c getch.c byteconversion.c -o fbmenu
 
 PHONY: clean
 clean:
