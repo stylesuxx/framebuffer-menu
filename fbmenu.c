@@ -137,7 +137,7 @@ int main(int argc, char* argv[])
   }
 
   cleanUp();
-  
+
   printf("%d\n", selection + 1);
 
   return 0;
@@ -164,16 +164,16 @@ struct IMAGE build(const char *imagePath)
   unsigned char height[4];
   unsigned int fileSizeInBytes = 0;
   unsigned int fileSizeReal = 0;
-  
+  data.isValid = true;
+
   // Set the path to the image  
   strcpy(data.path, imagePath);
 
-  image = fopen(imagePath, "r+");
+  image = fopen(imagePath, "r");
   
   // Check for right bitmap format
   fread(format, 2, 1, image);
   if(strcmp(format, BITMAP_FORMAT) != 0) {
-    printf("Not the correct format.\n");
     data.isValid = false;
   }
 
@@ -185,7 +185,6 @@ struct IMAGE build(const char *imagePath)
   fileSizeReal =  ftell(image);
 
   if(fileSizeInBytes != fileSizeReal) {
-    printf("Image file corrupted, file size does not match.\n");
     data.isValid = false;
   }
 
@@ -201,7 +200,7 @@ struct IMAGE build(const char *imagePath)
   data.width = getIntFromBytes(width);
   data.height = getIntFromBytes(height);
 
-  data.bpp = 32;
+  data.bpp = ((fileSizeInBytes - data.dataOffset) / (data.height * data.width)) * 8;
 
   fclose(image);
   return data;
