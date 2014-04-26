@@ -3,10 +3,9 @@
 unsigned int littleEndianToInt(unsigned char bytes[])
 {
   unsigned int result = 0;
-  unsigned int length = sizeof(bytes);
-  
+
   int i;
-  for(i= 0; i < length; i++)
+  for(i = 0; i < sizeof(bytes); i++)
     result |= bytes[i]<<(8*i);
 
   return result;

@@ -274,6 +274,6 @@ void draw(imageData meta)
 
 void usage()
 {
-  printf("Usage: ./fbmenu imageData_FOLDER\n");
+  printf("Usage: ./fbmenu IMAGE_FOLDER\n");
   exit(1);
 }
