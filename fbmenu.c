@@ -6,8 +6,9 @@
 #include <linux/fb.h>
 #include <sys/mman.h>
 #include <dirent.h>
-#include <termios.h>
 #include <stdbool.h>
+
+#include "getch.h"
 
 static const char BITMAP_FORMAT[] = "BM";
 
@@ -104,7 +105,7 @@ int main(int argc, char* argv[])
     
   draw(build(paths[0]));
   for(;;) {
-    unsigned char keyPress = mygetch();
+    unsigned char keyPress = getch();
     if(keyPress == 'B' && escape) {
       selection++;
       if(selection >= images)
@@ -286,20 +287,4 @@ void usage()
 {
   printf("Usage: ./fbmenu IMAGE_FOLDER\n");
   exit(1);
-}
-
-int mygetch()
-{
-  struct termios oldt, newt;
-  int ch;
-  tcgetattr(STDIN_FILENO, &oldt);
-
-  newt = oldt;
-  newt.c_lflag &= ~(ICANON | ECHO);
-  
-  tcsetattr(STDIN_FILENO, TCSANOW, &newt);
-  ch = getchar();
-  tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-  
-  return ch;
 }
