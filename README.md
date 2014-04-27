@@ -1,4 +1,4 @@
-# Linux framebuffer menu / basic framebuffer image viewer
+# Linux framebuffer menu
 
 A simple menu for the framebuffer. You pass a folder with images, one for each highlighted menu item.
 The user may now navigate through the menu items with cursor up and down.

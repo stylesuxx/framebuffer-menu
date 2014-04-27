@@ -10,19 +10,9 @@
 
 #include "getch.h"
 #include "byteconversion.h"
+#include "framebufferimage.h"
 
-static const char BITMAP_FORMAT[] = "BM";
-
-typedef struct imageData{
-  char path[255];
-  int width, height;
-  int bpp;
-  int offset;
-  bool isValid;
-} imageData;
-
-imageData build(const char *imagePath);
-void draw(imageData image);
+void draw(imageData *image);
 
 void cleanUp();
 void usage();
@@ -102,8 +92,8 @@ int main(int argc, char* argv[])
   width = finfo.line_length / (depth/8);
   height = (screensize / (depth/8)) / width;
   frameBuffer = mmap(0, screensize, PROT_READ | PROT_WRITE, MAP_SHARED, frameBufferFD, 0);
-    
-  draw(build(paths[0]));
+      
+  draw(getMeta(paths[0]));
   for(;;) {
     unsigned char keyPress = getch();
     if(keyPress == 'B' && escape) {
@@ -111,7 +101,7 @@ int main(int argc, char* argv[])
       if(selection >= images)
         selection = images-1;
 
-      draw(build(paths[selection]));
+      draw(getMeta(paths[selection]));
     }
 
     if(keyPress == 'A' && escape) {
@@ -119,7 +109,7 @@ int main(int argc, char* argv[])
       if(selection < 0)
         selection = 0;
 
-      draw(build(paths[selection]));
+      draw(getMeta(paths[selection]));
     }
 
     if(keyPress == '[') escape = true;
@@ -146,130 +136,74 @@ void cleanUp()
   system("clear");
 }
 
-struct imageData build(const char *imagePath)
+void draw(imageData *meta)
 {
   FILE *image;
-  struct imageData data;
-  unsigned char format[3] = {'\0'};
-  unsigned char fileSize[4];
-  unsigned char offset[4];
-  unsigned char width[4];
-  unsigned char height[4];
-  unsigned int fileSizeInBytes = 0;
-  unsigned int fileSizeReal = 0;
-  unsigned int bytesRead;
-  
-  strcpy(data.path, imagePath);
-  data.isValid = true;
-  data.width = 0;
-  data.height = 0;
-  data.bpp = 32;
-
-  image = fopen(imagePath, "r");
-  
-  // Check for right bitmap format
-  fread(format, 2, 1, image);
-  if(strcmp(format, BITMAP_FORMAT) != 0) {
-    data.isValid = false;
-    fclose(image);
-
-    return data;
-  }
-
-  // Check the filesize indicated by the header with the files real size
-  fread(fileSize, 4, 1, image);
-  fileSizeInBytes = littleEndianToInt(fileSize);
-
-  fseek(image, 0, SEEK_END);
-  fileSizeReal =  ftell(image);
-
-  if(fileSizeInBytes != fileSizeReal) {
-    data.isValid = false;
-    fclose(image);
-
-    return data;
-  }
-
-  // Get the offset at which the actual image data starts
-  fseek(image, 10, SEEK_SET);
-  fread(offset, 4, 1, image);
-  data.offset = littleEndianToInt(offset);
-
-  // Get width & height
-  fseek(image, 18, SEEK_SET);
-  fread(width, 4, 1, image);
-  fread(height, 4, 1, image);
-  data.width = littleEndianToInt(width);
-  data.height = littleEndianToInt(height);
-
-  // Check the images depth
-  data.bpp = ((fileSizeInBytes - data.offset) / (data.height * data.width)) * 8;
-  if(data.bpp != 32)
-    data.isValid = false;
-
-  fclose(image);
-  return data;
-}
-
-void draw(imageData meta)
-{
-  FILE *image;
-  unsigned char *pixelBuffer = malloc(meta.bpp/8);
-  unsigned char *revertBuffer = malloc(meta.bpp/8);
+  unsigned char *pixelBuffer = malloc(meta->bpp/8);
+  unsigned char *revertBuffer = malloc(meta->bpp/8);
   unsigned int paddingHorizontal, paddingVertical;
   unsigned int dx, dy;
   unsigned int offsetBottom, offsetLeft, offsetRight;
   int i;
   int color = 0x00;
+  unsigned int Bpp, imageWidth, imageHeight, imageOffset;
+  bool isValid;
+  char *imagePath;
+
+  Bpp = meta->bpp/8;
+  imageWidth = meta->width;
+  imageHeight = meta->height;
+  imageOffset = meta->offset;
+  imagePath = meta->path;
+  isValid = meta->isValid;
 
   // Calculate the offsets for a centered menu
-  dx = width - meta.width;
-  dy = height - meta.height;
+  dx = width - imageWidth;
+  dy = height - imageHeight;
 
   if(dx > 0) paddingVertical = dx / 2;
   if(dy > 0) paddingHorizontal = dy / 2;
 
   // Draw the border
-  offsetBottom = width * (paddingHorizontal + meta.height) * (meta.bpp/8);
-  memset(frameBuffer, color, width * paddingHorizontal * (meta.bpp/8));
-  memset(frameBuffer + offsetBottom, color, width * paddingHorizontal * (meta.bpp/8));
+  offsetBottom = width * (paddingHorizontal + imageHeight) * Bpp;
+  memset(frameBuffer, color, width * paddingHorizontal * Bpp);
+  memset(frameBuffer + offsetBottom, color, width * paddingHorizontal * Bpp);
   
   for(i = 0; i < height; i++) {
-    offsetLeft  = width * i * (meta.bpp/8);
-    offsetRight = offsetLeft + (paddingVertical + meta.width) * (meta.bpp/8);
-    memset(frameBuffer + offsetLeft,  color, paddingVertical * (meta.bpp/8));
-    memset(frameBuffer + offsetRight, color, paddingVertical * (meta.bpp/8));
+    offsetLeft  = width * i * Bpp;
+    offsetRight = offsetLeft + (paddingVertical + imageWidth) * Bpp;
+    memset(frameBuffer + offsetLeft,  color, paddingVertical * Bpp);
+    memset(frameBuffer + offsetRight, color, paddingVertical * Bpp);
   }
 
-  if(meta.isValid) {
     // Draw the menu item
-    image = fopen(meta.path, "r+");
-    fseek(image, meta.offset, SEEK_SET);
+    image = fopen(imagePath, "r");
+    fseek(image, imageOffset, SEEK_SET);
 
     int off;
-    for(i = meta.height-1; i >= 0; i--) {
-      off  = width * paddingHorizontal * (meta.bpp/8);
-      off += width * (meta.bpp/8) * i;
-      off += paddingVertical * (meta.bpp/8);
+    for(i = imageHeight - 1; i >= 0; i--) {
+      off  = width * paddingHorizontal * Bpp;
+      off += width * Bpp * i;
+      off += paddingVertical * Bpp;
 
       int k;
-      for(k = 0; k < meta.width; k++) {
-        fread(pixelBuffer, sizeof(char), (meta.bpp/8), image);
+      for(k = 0; k < imageWidth; k++) {
+        fread(pixelBuffer, sizeof(char), Bpp, image);
 
         int j;
-        for(j = 1; j <= (meta.bpp/8); j++)
+        for(j = 1; j <= Bpp; j++)
           revertBuffer[j-1] = pixelBuffer[j];
-        revertBuffer[(depth/8)] = pixelBuffer[0];
+        revertBuffer[Bpp] = pixelBuffer[0];
 
-        memcpy(frameBuffer + off + (meta.bpp/8) * k, revertBuffer, (meta.bpp/8));
+        memcpy(frameBuffer + off + Bpp * k, revertBuffer, Bpp);
       }
     }
     
     fclose(image);
-  }
 
   free(pixelBuffer);
   free(revertBuffer);
+  free(meta);
 }
 
 void usage()
