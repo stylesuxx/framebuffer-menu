@@ -139,8 +139,8 @@ void cleanUp()
 void draw(imageData *meta)
 {
   FILE *image;
-  unsigned char *pixelBuffer = malloc(meta->bpp/8);
-  unsigned char *revertBuffer = malloc(meta->bpp/8);
+  unsigned char *pixelBuffer = malloc(4);
+  unsigned char *revertBuffer = malloc(4);
   unsigned int paddingHorizontal, paddingVertical;
   unsigned int dx, dy;
   unsigned int offsetBottom, offsetLeft, offsetRight;
@@ -149,6 +149,11 @@ void draw(imageData *meta)
   unsigned int Bpp, imageWidth, imageHeight, imageOffset;
   bool isValid;
   char *imagePath;
+
+  if(meta == NULL) {
+    memset(frameBuffer, color, screensize);
+    return;
+  }
 
   Bpp = meta->bpp/8;
   imageWidth = meta->width;
