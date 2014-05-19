@@ -37,9 +37,6 @@ int main(int argc, char* argv[])
   if(argc < 2)
     usage();
 
-  system("setterm -cursor off");
-  system("stty -echo");
-
   imagePath = argv[1];
   
   // Build an array of paths to the menu item images
@@ -50,6 +47,9 @@ int main(int argc, char* argv[])
     printf("Could not read image directory.\n");
     return 1;
   }
+
+  system("setterm -cursor off");
+  system("stty -echo");
 
   for (i = 0; i < n; i++) {
     if(strstr(namelist[i]->d_name, ".bmp") == NULL) continue;
